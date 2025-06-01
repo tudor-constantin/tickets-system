@@ -122,7 +122,7 @@ Esto creará las tablas y cargará roles y usuarios de prueba si usas seeders.
 php artisan serve
 ```
 
-Luego accedé a la app desde: http://localhost:8000
+Luego accedé a la app desde: http://localhost
 
 ---
 
