@@ -3,76 +3,134 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 class PermissionSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
+     * Mapeo de roles y sus permisos correspondientes.
+     *
+     * @var array<string, array<int, string>>
+     */
+    protected array $rolePermissions = [
+        'user' => [
+            'tickets.create',
+            'tickets.view.own',
+            'tickets.update.own',
+            'tickets.delete.own',
+        ],
+        'agent' => [
+            'tickets.view.own',
+            'tickets.view.all',
+            'tickets.update.own',
+            'tickets.update.all',
+            'tickets.change-status',
+        ],
+        'admin' => ['*'], // Todos los permisos
+    ];
+
+    /**
+     * Lista de todos los permisos agrupados por módulo.
+     *
+     * @var array<string, array<int, string>>
+     */
+    protected array $modulePermissions = [
+        'tickets' => [
+            'create' => 'Crear nuevos tickets',
+            'view.own' => 'Ver tickets propios',
+            'view.all' => 'Ver todos los tickets',
+            'update.own' => 'Actualizar tickets propios',
+            'update.all' => 'Actualizar cualquier ticket',
+            'delete.own' => 'Eliminar tickets propios',
+            'delete.all' => 'Eliminar cualquier ticket',
+            'assign' => 'Asignar tickets',
+            'change-status' => 'Cambiar estado de tickets',
+        ],
+        'categories' => [
+            'manage' => 'Gestionar categorías',
+        ],
+        'users' => [
+            'manage' => 'Gestionar usuarios',
+        ],
+        'agents' => [
+            'manage' => 'Gestionar agentes',
+        ],
+        'settings' => [
+            'manage' => 'Gestionar configuración del sistema',
+        ],
+    ];
+
+    /**
+     * Ejecuta los seeders de la base de datos.
+     *
+     * @return void
      */
     public function run(): void
     {
-        // Reset cached roles and permissions
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        // Resetear caché de roles y permisos
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        $this->createPermissions();
-        $this->createRoles();
+        DB::transaction(function () {
+            $this->createPermissions();
+            $this->createRoles();
+        });
     }
 
     /**
-     * Crea los permisos del sistema.
+     * Crea todos los permisos del sistema organizados por módulos.
+     *
+     * @return void
      */
     protected function createPermissions(): void
     {
-        // Tickets
-        Permission::firstOrCreate(['name' => 'create tickets']);
-        Permission::firstOrCreate(['name' => 'view own tickets']);
-        Permission::firstOrCreate(['name' => 'view all tickets']);
-        Permission::firstOrCreate(['name' => 'update own tickets']);
-        Permission::firstOrCreate(['name' => 'update all tickets']);
-        Permission::firstOrCreate(['name' => 'delete own tickets']);
-        Permission::firstOrCreate(['name' => 'delete all tickets']);
-        Permission::firstOrCreate(['name' => 'assign tickets']);
-        Permission::firstOrCreate(['name' => 'change ticket status']);
+        $this->command->info('Creando permisos...');
+        $bar = $this->command->getOutput()->createProgressBar(
+            count($this->modulePermissions, COUNT_RECURSIVE) - count($this->modulePermissions)
+        );
+
+        foreach ($this->modulePermissions as $module => $permissions) {
+            $this->command->info("\nMódulo: " . ucfirst($module));
+            
+            foreach ($permissions as $action => $description) {
+                $name = "{$module}.{$action}";
+                
+                Permission::firstOrCreate(
+                    ['name' => $name],
+                    ['description' => $description, 'guard_name' => 'web']
+                );
+                
+                $bar->advance();
+            }
+        }
         
-        // Categorías
-        Permission::firstOrCreate(['name' => 'manage categories']);
-        
-        // Usuarios
-        Permission::firstOrCreate(['name' => 'manage users']);
-        Permission::firstOrCreate(['name' => 'manage agents']);
-        
-        // Configuración
-        Permission::firstOrCreate(['name' => 'manage settings']);
+        $bar->finish();
+        $this->command->newLine(2);
     }
 
     /**
      * Crea los roles y asigna los permisos correspondientes.
+     *
+     * @return void
      */
     protected function createRoles(): void
     {
-        // Rol de Usuario
-        $userRole = Role::firstOrCreate(['name' => 'user']);
-        $userRole->syncPermissions([
-            'create tickets',
-            'view own tickets',
-            'update own tickets',
-            'delete own tickets',
-        ]);
+        $this->command->info('Creando roles y asignando permisos...');
+        
+        foreach ($this->rolePermissions as $roleName => $permissions) {
+            $role = Role::firstOrCreate(
+                ['name' => $roleName],
+                ['guard_name' => 'web']
+            );
 
-        // Rol de Agente
-        $agentRole = Role::firstOrCreate(['name' => 'agent']);
-        $agentRole->syncPermissions([
-            'view own tickets',
-            'view all tickets',
-            'update own tickets',
-            'update all tickets',
-            'change ticket status',
-        ]);
+            if ($permissions === ['*']) {
+                $permissions = Permission::pluck('name')->toArray();
+            }
 
-        // Rol de Administrador
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $adminRole->syncPermissions(Permission::all());
+            $role->syncPermissions($permissions);
+            $this->command->info(" - Rol '{$roleName}' creado/actualizado con " . count($permissions) . " permisos");
+        }
     }
 }
