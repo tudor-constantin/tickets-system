@@ -69,3 +69,73 @@ Sistema de soporte técnico desarrollado con Laravel 12. Permite a los usuarios 
 - **Laravel File Storage**
 - **Chart.js**
 - Base de datos: **MySQL**
+
+---
+
+## Instalación y Ejecución
+
+Sigue estos pasos para ejecutar el proyecto en tu entorno local:
+
+### 1. Clonar el repositorio
+
+```bash
+git clone https://github.com/tudor-constantin/tickets-system.git
+cd tickets-system
+```
+
+### 2. Instalar dependencias
+
+```bash
+composer install
+npm install && npm run dev
+```
+
+### 3. Configurar archivo `.env`
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+Edita el archivo `.env` y configura tus datos de conexión a la base de datos:
+
+```ini
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=tu_db
+DB_USERNAME=tu_usuario
+DB_PASSWORD=tu_contraseña
+```
+
+### 4. Ejecutar migraciones y seeders
+
+```bash
+php artisan migrate --seed
+```
+
+Esto creará las tablas y cargará roles y usuarios de prueba si usas seeders.
+
+### 5. Levantar el servidor de desarrollo
+
+```bash
+php artisan serve
+```
+
+Luego accedé a la app desde: http://localhost:8000
+
+---
+
+## Accesos de prueba (incluidos por los seeders)
+
+- **Administrador**
+  - Email: `admin@example.com`
+  - Contraseña: `password`
+
+- **Agente**
+  - Email: `agent@example.com`
+  - Contraseña: `password`
+
+- **Usuario**
+  - Email: `user@example.com`
+  - Contraseña: `password`
